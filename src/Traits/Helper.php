@@ -108,12 +108,20 @@ trait Helper
 
     public function ip()
     {
-        if ($cf_ip = $this->request->header('CF_CONNECTING_IP')) {
-            $ip = $cf_ip;
-        } else {
-            $ip = $this->request->ip();
+        // Check if Laravel has any trusted proxies set
+        $trustedProxies = $this->request->getTrustedProxies();
+
+        // If there are trusted proxies, use the client IP from the request, which respects those settings
+        if (!empty($trustedProxies)) {
+            return $this->request->getClientIp();
         }
 
-        return $ip;
+        // Check REMOTE_ADDR directly if no trusted proxies are configured
+        $remoteAddr = $this->request->server('REMOTE_ADDR');
+        if (filter_var($remoteAddr, FILTER_VALIDATE_IP)) {
+            return $remoteAddr;
+        }
+
+        return $this->request->ip();
     }
 }
